@@ -37,6 +37,7 @@ PUBLIC
     $<INSTALL_INTERFACE:include>
     ${OpenCV_INCLUDE_DIRS}
     ${catkin_INCLUDE_DIRS}
+    ${CUDA_INCLUDE_DIRS}
 )
 
 target_link_libraries(lib_fusion
