@@ -1,0 +1,19 @@
+<package format="2">
+  <name>lib_fusion</name>
+
+  <version>0.0.1</version>
+
+  <description>
+  This package is a ros warpper of CUDA ICP.
+  </description>
+
+  <maintainer email="x.yang@bristol.ac.uk">Xingrui Yang</maintainer>
+
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>cuda_ros</build_depend>
+
+  <exec_depend>cuda_ros</exec_depend>
+</package>
