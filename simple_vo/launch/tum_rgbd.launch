@@ -1,9 +1,8 @@
 <launch>
-    <!-- <include file="$(find openni2_launch)/launch/openni2.launch"/> -->
     <remap from="/camera/rgb/image" to="/camera/rgb/image_raw"/>
     <remap from="/camera/rgb/camera_info" to="/camera/rgb/camera_info"/>
-    <remap from="/camera/depth/image" to="/camera/depth_registered/image_raw"/>
+    <remap from="/camera/depth/image" to="/camera/depth_registered/image"/>
     <remap from="/camera/depth/camera_info" to="/camera/depth/camera_info"/>
     <param name="publish_debug_image" type="bool" value="true" />
-    <node name="odometry" pkg="simple_vo" type="simple_vo" output="screen" respawn="true"/>
+    <node name="odometry" pkg="simple_vo" type="simple_vo" output="screen" />
 </launch>

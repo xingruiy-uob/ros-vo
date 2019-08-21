@@ -28,11 +28,6 @@ public:
     SimpleVO(
         const int image_width,
         const int image_height,
-        const bool enable_debug_output = false,
-        const char *depth_image_topic = "/camera/depth/image_raw",
-        const char *color_image_topic = "/camera/rgb/image_raw",
-        const char *depth_camera_info = "/camera/depth/camera_info",
-        const char *color_camera_info = "/camera/rgb/camera_info",
         const Eigen::Matrix3d &K = Eigen::Matrix3d(),
         const double icp_max_error = 10e-4,
         const double rgb_max_error = 10e-3,
@@ -76,13 +71,14 @@ private:
     const int image_width;
     const int image_height;
     const double max_time_diff;
-    const bool enable_debug_output;
     const double rgb_max_error;
     const double icp_max_error;
 
     Frame last_frame;
     Frame current_frame;
     Frame current_keyframe;
+
+    bool enable_debug_output;
 };
 
 #endif

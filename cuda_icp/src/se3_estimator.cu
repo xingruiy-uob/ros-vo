@@ -135,7 +135,7 @@ void compute_icp_step(
     cv::cuda::GpuMat sum,
     cv::cuda::GpuMat out,
     const Eigen::Affine3d &T,
-    const Eigen::Matrix3f &K,
+    const Eigen::Matrix3d &K,
     const float dist_thresh,
     const float angle_thresh,
     float *const H,
@@ -185,17 +185,6 @@ void compute_icp_step(
 RGB STEP
 =====================================
 */
-
-// __device__ __forceinline__ float interpolate(
-//     const cv::cuda::PtrStep<float> &map,
-//     const float &x, const float &y)
-// {
-//     int u = static_cast<int>(std::floor(x));
-//     int v = static_cast<int>(std::floor(y));
-//     float cox = x - u, coy = y - v;
-//     return (map.ptr(v)[u] * (1 - cox) + map.ptr(v)[u + 1] * cox) * (1 - coy) +
-//            (map.ptr(v + 1)[u] * (1 - cox) + map.ptr(v + 1)[u + 1] * cox) * coy;
-// }
 
 struct ComputeResidualFunctor
 {
@@ -381,7 +370,7 @@ void compute_rgb_step(
     cv::cuda::GpuMat &out_res,
     cv::cuda::GpuMat &corr_map,
     const Eigen::Affine3d &T,
-    const Eigen::Matrix3f &K,
+    const Eigen::Matrix3d &K,
     const float min_gradient,
     const float max_gradient,
     const float max_residual,
@@ -405,8 +394,8 @@ void compute_rgb_step(
     res_functor.image_ref = image_ref;
     res_functor.gradient_x = gradient_x;
     res_functor.gradient_y = gradient_y;
-    res_functor.KR = K * T.matrix().topLeftCorner(3, 3).cast<float>();
-    res_functor.Kt = K * T.matrix().topRightCorner(3, 1).cast<float>();
+    res_functor.KR = K * T.matrix().topLeftCorner(3, 3);
+    res_functor.Kt = K * T.matrix().topRightCorner(3, 1);
     res_functor.max_residual = max_residual;
     res_functor.max_dist = max_dist;
     res_functor.min_gradient = min_gradient;

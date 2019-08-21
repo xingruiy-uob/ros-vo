@@ -12,11 +12,6 @@ enum ResultType
 SimpleVO::SimpleVO(
     const int image_width,
     const int image_height,
-    const bool enable_debug_output,
-    const char *depth_image_topic,
-    const char *color_image_topic,
-    const char *depth_camera_info,
-    const char *color_camera_info,
     const Eigen::Matrix3d &K,
     const double icp_max_error,
     const double rgb_max_error,
@@ -28,7 +23,6 @@ SimpleVO::SimpleVO(
       warm_up_frame(warm_up_frame),
       icp_max_error(icp_max_error),
       rgb_max_error(rgb_max_error),
-      enable_debug_output(enable_debug_output),
       cam_param(K),
       tracker(NULL),
       num_frame(0)
@@ -36,10 +30,12 @@ SimpleVO::SimpleVO(
     ROS_INFO("SimpleVO ctor...");
     camera_pose.setIdentity();
 
-    rgb_sub.subscribe(ros_node, color_image_topic, 10);
-    rgb_info_sub.subscribe(ros_node, color_camera_info, 10);
-    depth_sub.subscribe(ros_node, depth_image_topic, 10);
-    depth_info_sub.subscribe(ros_node, depth_camera_info, 10);
+    ros_node.param("publish_debug_image", enable_debug_output, false);
+
+    rgb_sub.subscribe(ros_node, "/camera/rgb/image", 10);
+    rgb_info_sub.subscribe(ros_node, "/camera/rgb/camera_info", 10);
+    depth_sub.subscribe(ros_node, "/camera/depth/image", 10);
+    depth_info_sub.subscribe(ros_node, "camera/depth/camera_info", 10);
 
     debug_depth_diff = ros_node.advertise<sensor_msgs::Image>("/simplevo/debug/depth_diff", 1);
     debug_gradient_x = ros_node.advertise<sensor_msgs::Image>("/simplevo/debug/gradient_x", 1);
@@ -58,14 +54,18 @@ SimpleVO::SimpleVO(
         image_width,
         image_height,
         K,
-        5,
-        false, // robust estimator
-        -1,    // debug on
-        true,  // use icp
-        true,  // use rgb
-        3.0,   // depth cutoff
-        0.03,  // max dist
-        25     // max residual
+        5,                   // num octave
+        false,               // robust estimator
+        -1,                  // debug on
+        true,                // use icp
+        false,               // use rgb
+        3.0,                 // depth cutoff
+        0.01,                // max dist
+        25,                  // max residual
+        0,                   // min gradient
+        30,                  // max gradient
+        0.01,                // dist thresh
+        cos(30 * 3.14 / 180) // angle thresh
     );
 
     last_frame.clear_pose();
@@ -132,7 +132,6 @@ void SimpleVO::handle_images(
             CV_16UC1,
             (void *)depth_registered->data.data(),
             depth_registered->step);
-
         depth_raw.convertTo(current_frame.depth, CV_32FC1, 1.0 / 1000);
     }
     else
@@ -174,7 +173,7 @@ void SimpleVO::handle_images(
         if (enable_debug_output)
         {
             cv::Mat out;
-            cv::subtract(current_frame.depth, last_frame.depth, out);
+            cv::subtract(current_frame.image, last_frame.image, out);
             sensor_msgs::Image msg;
             msg.header.stamp = ros::Time::now();
             msg.encoding = sensor_msgs::image_encodings::TYPE_32FC1;
@@ -184,7 +183,16 @@ void SimpleVO::handle_images(
             msg.data = std::vector<uchar>(out.data, out.data + out.step * out.rows);
             debug_depth_diff.publish(msg);
 
-            cv::subtract(current_frame.image, last_frame.image, out);
+            cv::cuda::GpuMat out_image;
+            compute_photometric_residual(
+                tracker->get_vmap_ref(),
+                tracker->get_image_src(),
+                tracker->get_image_ref(),
+                result.update,
+                cam_param,
+                out_image);
+            out_image.download(out);
+
             msg.header.stamp = ros::Time::now();
             msg.encoding = sensor_msgs::image_encodings::TYPE_32FC1;
             msg.width = out.cols;

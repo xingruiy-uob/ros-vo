@@ -154,7 +154,7 @@ ICPTracker::Result ICPTracker::compute_transform(
   auto estimate = initial_estimate;
   Eigen::Affine3d last_success_estimate;
 
-  for (int level = max_iterations.size() - 1; level >= 0; --level)
+  for (int level = num_octave - 1; level >= 0; --level)
   {
     const auto K = cam_param_pyr[level];
     const auto vmap_src = vmap_src_pyr[level];
@@ -216,7 +216,7 @@ ICPTracker::Result ICPTracker::compute_transform(
             SUM_SE3,
             OUT_SE3,
             estimate,
-            K.cast<float>(),
+            K,
             dist_thresh,
             angle_thresh,
             H_TEMP.data(),
@@ -226,15 +226,6 @@ ICPTracker::Result ICPTracker::compute_transform(
             display_debug_info >= 0);
 
         error += sqrt(residual_sum) / (num_residual + 1);
-
-        // if (display_debug_info >= 0)
-        // {
-        //   std::cout << "ICP finished with residual sum: "
-        //             << residual_sum
-        //             << " and num residuals: "
-        //             << num_residual
-        //             << std::endl;
-        // }
 
         H += H_TEMP;
         b += b_TEMP;
@@ -258,7 +249,7 @@ ICPTracker::Result ICPTracker::compute_transform(
             OUT_RES,
             CORRES_MAP,
             estimate,
-            K.cast<float>(),
+            K,
             min_gradient,
             max_gradient,
             max_residual,
@@ -270,15 +261,6 @@ ICPTracker::Result ICPTracker::compute_transform(
             display_debug_info >= 0);
 
         error += sqrt(residual_sum) / (num_residual + 1);
-
-        // if (display_debug_info >= 0)
-        // {
-        //   std::cout << "RGB reduction finished with residual sum: "
-        //             << residual_sum
-        //             << " and num residuals: "
-        //             << num_residual
-        //             << std::endl;
-        // }
 
         if (!enable_icp)
         {
