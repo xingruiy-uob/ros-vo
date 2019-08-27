@@ -37,9 +37,9 @@ SimpleVO::SimpleVO(
     depth_sub.subscribe(ros_node, "/camera/depth/image", 10);
     depth_info_sub.subscribe(ros_node, "camera/depth/camera_info", 10);
 
-    debug_depth_diff = ros_node.advertise<sensor_msgs::Image>("/simplevo/debug/depth_diff", 1);
-    debug_gradient_x = ros_node.advertise<sensor_msgs::Image>("/simplevo/debug/gradient_x", 1);
-    debug_intensity_diff = ros_node.advertise<sensor_msgs::Image>("/simplevo/debug/intensity_diff", 1);
+    debug_depth_diff = ros_node.advertise<sensor_msgs::Image>("/debug/depth_diff", 1);
+    debug_gradient_x = ros_node.advertise<sensor_msgs::Image>("/debug/gradient_x", 1);
+    debug_intensity_diff = ros_node.advertise<sensor_msgs::Image>("/debug/intensity_diff", 1);
 
     sync = std::make_shared<message_filters::Synchronizer<RGBDPolicy>>(
         RGBDPolicy(100),
@@ -57,13 +57,13 @@ SimpleVO::SimpleVO(
         5,                   // num octave
         false,               // robust estimator
         -1,                  // debug on
-        true,                // use icp
-        false,               // use rgb
-        3.0,                 // depth cutoff
-        0.01,                // max dist
-        25,                  // max residual
+        false,               // use icp
+        true,                // use rgb
+        100.0,               // depth cutoff
+        10.0,                // max dist
+        255,                 // max residual
         0,                   // min gradient
-        30,                  // max gradient
+        255,                 // max gradient
         0.01,                // dist thresh
         cos(30 * 3.14 / 180) // angle thresh
     );
@@ -86,6 +86,18 @@ void SimpleVO::create_new_keyframe()
 bool SimpleVO::check_result(const ICPTracker::Result &result)
 {
     return true;
+}
+
+sensor_msgs::ImagePtr cvMat_to_ros_msg(cv::Mat in, std::string encoding = sensor_msgs::image_encodings::MONO8)
+{
+    sensor_msgs::Image::Ptr msg(new sensor_msgs::Image());
+    msg->header.stamp = ros::Time::now();
+    msg->encoding = encoding;
+    msg->width = in.cols;
+    msg->height = in.rows;
+    msg->step = in.step;
+    msg->data = std::vector<uchar>(in.data, in.data + in.step * in.rows);
+    return msg;
 }
 
 void SimpleVO::handle_images(
@@ -173,15 +185,12 @@ void SimpleVO::handle_images(
         if (enable_debug_output)
         {
             cv::Mat out;
-            cv::subtract(current_frame.image, last_frame.image, out);
-            sensor_msgs::Image msg;
-            msg.header.stamp = ros::Time::now();
-            msg.encoding = sensor_msgs::image_encodings::TYPE_32FC1;
-            msg.width = out.cols;
-            msg.height = out.rows;
-            msg.step = out.step;
-            msg.data = std::vector<uchar>(out.data, out.data + out.step * out.rows);
-            debug_depth_diff.publish(msg);
+            cv::absdiff(current_frame.image, last_frame.image, out);
+            cv::normalize(out, out, 1.0, 0, cv::NORM_MINMAX);
+            out.convertTo(out, CV_8UC1, 255);
+
+            auto msg = cvMat_to_ros_msg(out, sensor_msgs::image_encodings::MONO8);
+            debug_depth_diff.publish(*msg);
 
             cv::cuda::GpuMat out_image;
             compute_photometric_residual(
@@ -191,24 +200,19 @@ void SimpleVO::handle_images(
                 result.update,
                 cam_param,
                 out_image);
-            out_image.download(out);
+            cv::Mat out_cpu(out_image);
+            cv::normalize(out_cpu, out, 1.0, 0, cv::NORM_MINMAX);
+            out.convertTo(out, CV_8UC1, 255);
 
-            msg.header.stamp = ros::Time::now();
-            msg.encoding = sensor_msgs::image_encodings::TYPE_32FC1;
-            msg.width = out.cols;
-            msg.height = out.rows;
-            msg.step = out.step;
-            msg.data = std::vector<uchar>(out.data, out.data + out.step * out.rows);
-            debug_intensity_diff.publish(msg);
+            msg = cvMat_to_ros_msg(out, sensor_msgs::image_encodings::MONO8);
+            debug_intensity_diff.publish(*msg);
 
-            out = cv::Mat(tracker->get_gradient_x());
-            msg.header.stamp = ros::Time::now();
-            msg.encoding = sensor_msgs::image_encodings::TYPE_32FC1;
-            msg.width = out.cols;
-            msg.height = out.rows;
-            msg.step = out.step;
-            msg.data = std::vector<uchar>(out.data, out.data + out.step * out.rows);
-            debug_gradient_x.publish(msg);
+            auto gradient_x_gpu = tracker->get_gradient_x();
+            gradient_x_gpu.download(out);
+            cv::normalize(out, out, 1.0, 0, cv::NORM_MINMAX);
+            out.convertTo(out, CV_8UC1, 255);
+            msg = cvMat_to_ros_msg(out, sensor_msgs::image_encodings::MONO8);
+            debug_gradient_x.publish(*msg);
         }
     }
 
@@ -228,9 +232,10 @@ void SimpleVO::reset_vo()
 
 void SimpleVO::publish_pose()
 {
-    auto zplus = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d(0, 1, 0)).toRotationMatrix();
-    auto xplus = Eigen::AngleAxisd(-M_PI / 2, Eigen::Vector3d(1, 0, 0)).toRotationMatrix();
-    auto transformStamped = tf2::eigenToTransform(xplus * zplus * current_frame.get_pose().inverse());
+    // auto zplus = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d(0, 1, 0)).toRotationMatrix();
+    // auto xplus = Eigen::AngleAxisd(-M_PI / 2, Eigen::Vector3d(1, 0, 0)).toRotationMatrix();
+    // auto transformStamped = tf2::eigenToTransform(xplus * zplus * current_frame.get_pose().inverse());
+    auto transformStamped = tf2::eigenToTransform(current_frame.get_pose().inverse());
     transformStamped.header.stamp = ros::Time::now();
     transformStamped.header.frame_id = "camera_link";
     transformStamped.child_frame_id = "world";

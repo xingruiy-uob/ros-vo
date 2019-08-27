@@ -107,7 +107,11 @@ void ICPTracker::set_source_image(const cv::cuda::GpuMat image)
 
   for (int i = 0; i < num_octave; ++i)
   {
-    compute_gradient_sobel(image_src_pyr[i], gradient_x_pyr[i], gradient_y_pyr[i]);
+    compute_derivative(image_src_pyr[i], gradient_x_pyr[i], gradient_y_pyr[i]);
+    // double min_val, max_val;
+    // auto sum = cv::cuda::sum(gradient_x_pyr[i]);
+    // std::cout << sum / (gradient_x_pyr[i].cols * gradient_x_pyr[i].rows) << std::endl;
+    // compute_gradient_sobel(image_src_pyr[i], gradient_x_pyr[i], gradient_y_pyr[i]);
   }
 }
 
@@ -297,7 +301,7 @@ ICPTracker::Result ICPTracker::compute_transform(
         }
 
         Eigen::Matrix<double, 6, 1> xi = H.cast<double>().ldlt().solve(b.cast<double>());
-        Eigen::Affine3d dT = se3_exp_map(xi);
+        Eigen::Affine3d dT = se3_exp_map(1.5 * xi);
         estimate = dT * estimate;
 
         if (!error_increased)

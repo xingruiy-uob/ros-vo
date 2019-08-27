@@ -25,6 +25,7 @@ PRIVATE
     src/icp_tracker.cpp
     src/pyr_down.cu
     src/se3_estimator.cu
+    src/se3_experiment.cu
 )
 
 target_compile_features(cuda_icp

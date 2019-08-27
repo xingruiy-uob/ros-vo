@@ -66,10 +66,12 @@ struct ICPFunctor
         float dist = (vlast_g - vcurr_g).norm();
         float sine = ncurr_g.cross(nlast_g).norm();
 
-        return (sine < angle_thresh &&
-                dist <= dist_thresh &&
-                !isnan(ncurr_g.x) &&
-                !isnan(nlast_g.x));
+        return (
+            // sine < angle_thresh &&
+            // dist <= dist_thresh &&
+            // !isnan(ncurr_g.x) &&
+            !isnan(dist) &&
+            !isnan(nlast_g.x));
     }
 
     __device__ __forceinline__ void compute_jacobian(

@@ -76,9 +76,9 @@ __global__ void compute_photometric_residual_kernel(
     const float v = fy * pt.y / pt.z + cy;
 
     if (u > 0 && v > 0 && u < vmap_ref.cols - 1 && v < vmap_ref.rows - 1)
-        out_residual.ptr(y)[x] = interpolate(image_src, u, v) - image_ref.ptr(y)[x];
+        out_residual.ptr(y)[x] = fabs(interpolate(image_src, u, v) - image_ref.ptr(y)[x]);
     else
-        out_residual.ptr(y)[x] = std::nan("a");
+        out_residual.ptr(y)[x] = 0;
 }
 
 void compute_photometric_residual(
