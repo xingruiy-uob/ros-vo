@@ -304,7 +304,7 @@ ICPTracker::Result ICPTracker::compute_transform(
         Eigen::Affine3d dT = se3_exp_map(1.5 * xi);
         estimate = dT * estimate;
 
-        if (!error_increased)
+        if (!early_stop || !error_increased)
         {
           last_error = error;
           last_success_estimate = estimate;

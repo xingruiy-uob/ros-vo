@@ -49,3 +49,5 @@ PUBLIC
     ${OpenCV_LIBRARIES}
     ${catkin_LIBRARIES}
 )
+
+add_subdirectory(example)

@@ -57,8 +57,8 @@ SimpleVO::SimpleVO(
         5,                   // num octave
         false,               // robust estimator
         -1,                  // debug on
-        false,               // use icp
-        true,                // use rgb
+        true,                // use icp
+        false,               // use rgb
         100.0,               // depth cutoff
         10.0,                // max dist
         255,                 // max residual
